@@ -5,4 +5,4 @@ LR1 parser generator for NodeJS environment
 
 ## Licence
 
-[The MIT Licence (Expat).](LICENCE.md)
+[The MIT Licence (Expat).](LICENCE)
