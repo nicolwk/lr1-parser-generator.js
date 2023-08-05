@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-
 import * as acorn from 'acorn';
 import * as astring from 'astring';
 import ts from 'typescript';
@@ -10,13 +8,13 @@ import { ACTION_SHIFT } from './state';
 import { get_grammar_states } from './grammar';
 import { literal, array, property } from './astring-helper';
 
-export function generate_parser(conf: {start_symbol: string}, cb: (args: {
+export function generate_parser(rules_source_file: string, conf: {start_symbol: string}, cb: (args: {
   r: (lhs: string, rhs: (Terminal|string)[], reducer?: (...args: any[]) => any, options?: RuleOptions) => void,
   t: (token: string) => Terminal,
   k: (token: string) => Terminal,
   nt: (name: string) => NonTerminal,
   custom_terminal: (name: string) => Terminal
-}) => void){
+}) => void): {rules: string, spec: string} {
 
   let next_symbol_id = 0;
   let next_rule_id = 0;
@@ -85,17 +83,15 @@ export function generate_parser(conf: {start_symbol: string}, cb: (args: {
 
   const states = get_grammar_states({rules, start_symbol: nt(conf.start_symbol), end_symbol: END});
 
-  function transpile(path: string): string{
-    return ts.transpileModule(fs.readFileSync(path, {encoding: 'utf-8'}), {
+  function transpile(file_content: string): string{
+    return ts.transpileModule(file_content, {
       compilerOptions: {
         moduleResolution: ts.ModuleResolutionKind.Node16, lib: ['lib.es2020.d.ts'], module: ts.ModuleKind.ES2020, target: ts.ScriptTarget.ES2020
       }
     }).outputText;
   }
 
-  fs.writeFileSync('./dist/index.js', fs.readFileSync('./_dist/index.js', {encoding: 'utf-8'}), {encoding: 'utf-8'});
-
-  const rules_file_ast: any = acorn.parse(transpile('./src/rules.ts'), {ecmaVersion: 2020, sourceType: 'module'});
+  const rules_file_ast: any = acorn.parse(transpile(rules_source_file), {ecmaVersion: 2020, sourceType: 'module'});
   const rules_file_export_ast = rules_file_ast.body.find(stmt => stmt.type === 'ExportDefaultDeclaration');
   rules_file_export_ast.declaration = array(rules_file_export_ast.declaration.body.elements);
   const rules_ast = rules_file_export_ast.declaration.elements as {elements: any[]}[];
@@ -107,8 +103,6 @@ export function generate_parser(conf: {start_symbol: string}, cb: (args: {
       rule.elements[3] = literal(0);
     }
   }
-  fs.writeFileSync('./dist/rules.js', astring.generate(rules_file_ast));
-
 
   const body: any[] = [{
     type: "ExportDefaultDeclaration",
@@ -149,5 +143,8 @@ export function generate_parser(conf: {start_symbol: string}, cb: (args: {
     sourceType: "module"
   };
 
-  fs.writeFileSync('./dist/spec.js', astring.generate(node), {encoding: 'utf-8'});
+  return {
+    rules: astring.generate(rules_file_ast),
+    spec: astring.generate(node)
+  };
 }
