@@ -4,7 +4,7 @@ module.exports = {
   parser: '@typescript-eslint/parser',
   plugins: ['@typescript-eslint'],
   root: true,
-  ignorePatterns: ['dist/**/*.ts', 'dist/**/*.js'],
+  ignorePatterns: ['dist/**/*.ts', 'dist/**/*.js', 'test/**/*.ts', 'test/**/*.js'],
   rules: {
     'semi': ['error', 'always'],
     '@typescript-eslint/no-explicit-any': 'off',
